@@ -1,0 +1,66 @@
+* {
+  padding: 0;
+  margin: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  box-shadow: 2px 1px 4px 0 black;
+}
+
+#content {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  justify-items: center;
+  flex-direction: column;
+}
+
+#menu {
+  height: 8vh;
+}
+
+#menu > ul {
+  display: flex;
+  justify-content: flex-start;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+#menu > ul > li {
+  list-style: none;
+  display: block;
+  height: 100%;
+  background: cyan;
+}
+
+#page {
+  width: 100vw;
+  height: 90vh;
+}
+
+#page > * {
+  height: 100%;
+}
+
+#editor {
+  display: grid;
+  grid-template-columns: [three] 2fr [console] 7fr;
+}
+
+#three {
+  grid-column: three;
+  background: #fff2b3;
+}
+
+#console {
+  grid-column: console;
+  background: #bbff8a;
+}
