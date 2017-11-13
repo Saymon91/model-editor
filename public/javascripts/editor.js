@@ -1,12 +1,15 @@
 class Parameter {
-  constructor(options = {}) {
+  constructor(options = {}, model) {
     this.options = Object.assign({
       id          : null,
       name        : null,
       label       : null,
       custom      : false,
-      defaultValue: undefined
+      base        : 'state',
+      defaultValue: undefined,
     }, options);
+
+    this.model = model;
   }
 
   toJSON() {
@@ -27,18 +30,26 @@ class Parameter {
     return form;
   }
 
-  value(packet) {
-    return packet[this.options.name];
+  source(data) {
+    const { base, name, defaultValue } = this.options;
+    return data[base] === undefined
+      ? defaultValue
+      : data[base][name] === undefined
+        ? defaultValue
+        : data[base][name];
   }
 
-  source() {
-    return this.options.value;
+  value(data) {
+    return this.source(data);
   }
 }
 
 class StaticParameter extends Parameter {
-  constructor(options = {}) {
-    super(Object.assign(Object.freeze({ static: true }), { value: null }, options));
+  constructor(options = {}, model) {
+    super(Object.assign(Object.freeze({ static: true, custom: false }), {
+      value    : null,
+      exclusive: false
+    }, options), model);
   }
 
   form(customOnly = false) {
@@ -47,25 +58,24 @@ class StaticParameter extends Parameter {
       return false;
     }
 
-    form.append(`<span>Customizable</span><input type="checkbox" name="custom" ${this.options.custom ? 'checked' : ''}>`);
+    form.append(`<span>Exclusive</span><input type="checkbox" name="custom" ${this.options.exclusive ? 'checked' : ''}>`);
     return form;
   }
 
-  source() {
-    return this.options.value;
-  }
-
-  value(packet) {
-    return this.options.value;
+  source({ parameters }) {
+    const { name, exclusive, defaultValue, value } = this.options;
+    return exclusive
+      ? value === undefined ? defaultValue
+      : parameters[name] === undefined ? defaultValue : parameters[name] : value;
   }
 }
 
 
 class DigitalParameter extends Parameter {
-  constructor(options = {}) {
+  constructor(options = {}, model) {
     super(Object.assign({
-      type  : 'DC',
-    }, options));
+      type: 'DC',
+    }, options), model);
   }
 
   form(customOnly = false) {
@@ -76,7 +86,7 @@ class DigitalParameter extends Parameter {
 
     form.append(`
 <span>DefaultValue</span>
-<input type="number" name="defaultValue" min=0 max=1 step=1 value="${this.options.defaultValue}">
+<input type="number" name="defaultValue" min=0 max=1 step=1 value="${this.options.defaultValue || ''}">
 <input type="checkbox" name="customisable" value="defaultValue">`
     );
     return form;
@@ -84,27 +94,23 @@ class DigitalParameter extends Parameter {
 }
 
 class AnalogParameter extends Parameter {
-  constructor(options) {
+  constructor(options = {}, model) {
     super(Object.assign({
       type: 'ADC',
-    }, options));
+    }, options), model);
   }
 
   form(customOnly = false) {
     const form = super.form(customOnly);
-    if (!form) {
-      return form;
-    }
-
-    form.append(`<span>DefaultValue</span><input type="number" name="defaultValue" step=0.001 value="${this.options.defaultValue}">`);
-
-    return form;
+    return form
+      ? form.append(`<span>DefaultValue</span><input type="number" name="defaultValue" step=0.001 value="${this.options.defaultValue || 0}">`)
+      : form;
   }
 }
 
 
 class VirtualAnalogParameter extends AnalogParameter {
-  constructor(options = {}) {
+  constructor(options = {}, model) {
     super(Object.assign({
       virtual    : true,
       source     : null,
@@ -116,10 +122,10 @@ class VirtualAnalogParameter extends AnalogParameter {
         except: ['x', 'return x;'],
         values: []
       }
-    }, options));
+    }, options), model);
   }
 
-  form(customOnly = false, { parameters }) {
+  form(customOnly = false) {
     const form = super.form(customOnly);
     if (!form) {
       return form;
@@ -133,17 +139,17 @@ class VirtualAnalogParameter extends AnalogParameter {
 </select>`));
     const sourceSelector = form.find('select[name="source"]');
 
-    for (const id in parameters) {
-      const { label, name } = parameters[id];
+    for (const id in this.model.parameters) {
+      const { label, name } = this.model.parameters[id];
       sourceSelector.append($(new Option(label || name || id, id, false, id === source)));
     }
 
     const settings = $('<fieldset id="settings"><legend>Settings</legend></fieldset>').appendTo(form);
-
     const decode = $('<fieldset id="decode"><legend>Decode</legend></fieldset>').appendTo(settings);
     decode.append(`<span>Infra</span><input type="text" name="table-infra" value="${table.infra}">`);
     decode.append(`<span>Ultra</span><input type="text" name="table-ultra" value="${table.ultra}">`);
     decode.append(`<span>Except</span><input type="text" name="table-except" value="${table.except}">`);
+
     let index = 0;
     for (const { from, to, fx } of table.values) {
       decode.append(`
@@ -194,12 +200,12 @@ class VirtualAnalogParameter extends AnalogParameter {
 }
 
 class VirtualDigitalParameter extends DigitalParameter {
-  constructor(options = {}) {
+  constructor(options = {}, model) {
     super(Object.assign({
       virtual: true,
-      source: null,
-      invert: false
-    }, options));
+      source : null,
+      invert : false
+    }, options), model);
   }
 
   form(customOnly = false) {
@@ -249,8 +255,9 @@ class Editor {
     for (const commandId in model.parameters) {
       const parameter = model.parameters[commandId];
       $(`<div id="label-${commandId}">${commandId}</div>`).appendTo(this.elements.tree).click(() => {
+        model.parameters[commandId] = new this.controllers[parameter.type](parameter, model);
         this.elements.console.empty();
-        this.elements.console.append(new this.controllers[parameter.type](parameter).form(false, model));
+        this.elements.console.append(model.parameters[commandId].form(false));
       });
     }
   }
