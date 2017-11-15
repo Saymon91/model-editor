@@ -1,5 +1,5 @@
 class Parameter {
-  constructor(options = {}) {
+  constructor(options = {}, model) {
     this.options = Object.assign({
       id          : null,
       name        : null,
@@ -9,6 +9,8 @@ class Parameter {
       base        : 'state',
       defaultValue: undefined
     }, options);
+
+    this.model = model;
   }
 
   toJSON() {
@@ -64,18 +66,14 @@ class StaticParameter extends Parameter {
       ? value === undefined ? defaultValue : value
       : parameters === undefined ? defaultValue : parameters[name] === undefined ? defaultValue : parameters[name];
   }
-
-  value(object) {
-    return this.source(object);
-  }
 }
 
 
 class DigitalParameter extends Parameter {
-  constructor(options = {}) {
+  constructor(options = {}, model) {
     super(Object.assign({
       type: 'DC',
-    }, options));
+    }, options), model);
   }
 
   form(customOnly = false) {
@@ -86,7 +84,7 @@ class DigitalParameter extends Parameter {
 
     form.append(`
 <span>DefaultValue</span>
-<input type="number" name="defaultValue" min=0 max=1 step=1 value="${this.options.defaultValue}">
+<input type="number" name="defaultValue" min=0 max=1 step=1 value="${this.options.defaultValue || ''}">
 <input type="checkbox" name="customisable" value="defaultValue">`
     );
     return form;
@@ -94,10 +92,10 @@ class DigitalParameter extends Parameter {
 }
 
 class AnalogParameter extends Parameter {
-  constructor(options) {
+  constructor(options = {}, model) {
     super(Object.assign({
       type: 'ADC',
-    }, options));
+    }, options), model);
   }
 
   form(customOnly = false) {
@@ -110,7 +108,7 @@ class AnalogParameter extends Parameter {
 
 
 class VirtualAnalogParameter extends AnalogParameter {
-  constructor(options = {}) {
+  constructor(options = {}, model) {
     super(Object.assign({
       virtual    : true,
       source     : null,
@@ -122,10 +120,10 @@ class VirtualAnalogParameter extends AnalogParameter {
         except: ['x', 'return x;'],
         values: []
       }
-    }, options));
+    }, options), model);
   }
 
-  form(customOnly = false, { parameters }) {
+  form(customOnly = false) {
     const form = super.form(customOnly);
     if (!form) {
       return form;
@@ -139,17 +137,17 @@ class VirtualAnalogParameter extends AnalogParameter {
 </select>`));
     const sourceSelector = form.find('select[name="source"]');
 
-    for (const id in parameters) {
-      const { label, name } = parameters[id];
+    for (const id in this.model.parameters) {
+      const { label, name } = this.model.parameters[id];
       sourceSelector.append($(new Option(label || name || id, id, false, id === source)));
     }
 
     const settings = $('<fieldset id="settings"><legend>Settings</legend></fieldset>').appendTo(form);
-
     const decode = $('<fieldset id="decode"><legend>Decode</legend></fieldset>').appendTo(settings);
     decode.append(`<span>Infra</span><input type="text" name="table-infra" value="${table.infra}">`);
     decode.append(`<span>Ultra</span><input type="text" name="table-ultra" value="${table.ultra}">`);
     decode.append(`<span>Except</span><input type="text" name="table-except" value="${table.except}">`);
+
     let index = 0;
     for (const { from, to, fx } of table.values) {
       decode.append(`
@@ -201,12 +199,12 @@ class VirtualAnalogParameter extends AnalogParameter {
 }
 
 class VirtualDigitalParameter extends DigitalParameter {
-  constructor(options = {}) {
+  constructor(options = {}, model) {
     super(Object.assign({
       virtual: true,
-      source: null,
-      invert: false
-    }, options));
+      source : null,
+      invert : false
+    }, options), model);
   }
 
   form(customOnly = false) {
@@ -256,8 +254,9 @@ class Editor {
     for (const commandId in model.parameters) {
       const parameter = model.parameters[commandId];
       $(`<div id="label-${commandId}">${commandId}</div>`).appendTo(this.elements.tree).click(() => {
+        model.parameters[commandId] = new this.controllers[parameter.type](parameter, model);
         this.elements.console.empty();
-        this.elements.console.append(new this.controllers[parameter.type](parameter).form(false, model));
+        this.elements.console.append(model.parameters[commandId].form(false));
       });
     }
   }
