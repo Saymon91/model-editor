@@ -5,8 +5,9 @@ class Parameter {
       name        : null,
       label       : null,
       custom      : false,
+      exclusive   : false,
       base        : 'state',
-      defaultValue: undefined,
+      defaultValue: undefined
     }, options);
 
     this.model = model;
@@ -30,26 +31,22 @@ class Parameter {
     return form;
   }
 
-  source(data) {
-    const { base, name, defaultValue } = this.options;
-    return data[base] === undefined
-      ? defaultValue
-      : data[base][name] === undefined
-        ? defaultValue
-        : data[base][name];
+  value(object) {
+    return this.source(object);
   }
 
-  value(data) {
-    return this.source(data);
+  source(object) {
+    const { name, base, defaultValue } = this.options;
+    return object[base] === undefined
+      ? defaultValue
+      : object[base][name] === undefined
+        ? defaultValue : object[base][name];
   }
 }
 
 class StaticParameter extends Parameter {
-  constructor(options = {}, model) {
-    super(Object.assign(Object.freeze({ static: true, custom: false }), {
-      value    : null,
-      exclusive: false
-    }, options), model);
+  constructor(options = {}) {
+    super(Object.assign(Object.freeze({ static: true, custom: false }), { value: null, exclusive: false }, options));
   }
 
   form(customOnly = false) {
@@ -58,15 +55,16 @@ class StaticParameter extends Parameter {
       return false;
     }
 
-    form.append(`<span>Exclusive</span><input type="checkbox" name="custom" ${this.options.exclusive ? 'checked' : ''}>`);
+    form.append(`<span>Exclusive</span><input type="checkbox" name="exclusive" ${this.options.exclusive ? 'checked' : ''}>`);
+    form.append(`<span>DefaultValue</span><input type="text" name="defaultValue" value="${this.options.defaultValue}">`);
     return form;
   }
 
   source({ parameters }) {
     const { name, exclusive, defaultValue, value } = this.options;
     return exclusive
-      ? value === undefined ? defaultValue
-      : parameters[name] === undefined ? defaultValue : parameters[name] : value;
+      ? value === undefined ? defaultValue : value
+      : parameters === undefined ? defaultValue : parameters[name] === undefined ? defaultValue : parameters[name];
   }
 }
 
@@ -103,7 +101,7 @@ class AnalogParameter extends Parameter {
   form(customOnly = false) {
     const form = super.form(customOnly);
     return form
-      ? form.append(`<span>DefaultValue</span><input type="number" name="defaultValue" step=0.001 value="${this.options.defaultValue || 0}">`)
+      ? form.append(`<span>DefaultValue</span><input type="number" name="defaultValue" step=0.001 value="${this.options.defaultValue}">`)
       : form;
   }
 }
@@ -185,17 +183,18 @@ class VirtualAnalogParameter extends AnalogParameter {
     return except ? new Function(...except) : null;
   }
 
-  value(packet, model) {
-    const { source, table } = this.options;
-    const value = packet[source];
+  value(object) {
+    const { table, defaultValue } = this.options;
+    let value = this.source(object);
+
     const func = AnalogParameter.aproximate(value, table);
     return func instanceof Function
       ? func(value, model)
       : value;
   }
 
-  source(packet) {
-    return packet[this.options.source];
+  source(object) {
+    return object.model.parameters[this.options.source].value(object);
   }
 }
 
