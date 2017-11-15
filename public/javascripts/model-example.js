@@ -58,8 +58,125 @@ const model = {
       }
     },
   },
-  "commands"  : {},
-  "events"    : {}
+  "commands"  : {
+    "send-command-to-device": {
+      "base"     : null,
+      "arguments": {
+        "device-id": {
+          "type" : "text",
+          "value": undefined
+        },
+        "method"   : {
+          "type" : "text",
+          "value": undefined
+        },
+        "arguments": {
+          "type" : "text",
+          "value": undefined
+        }
+      }
+    },
+    "toggle-dry-contact": {
+      "base"     : null,
+      "arguments": {
+        "device-id": {
+          "type" : "text",
+          "value": undefined
+        },
+        "method"   : {
+          "type" : "text",
+          "value": "toggle"
+        },
+        "arguments": {
+          "type" : "object",
+          "value": {
+            "address": {
+              "type" : "text",
+              "value": undefined
+            },
+            "state"  : {
+              "type" : "text",
+              "value": undefined
+            }
+          }
+        }
+      }
+    },
+    "toggle-dry-contact#1": {
+      "base"     : null,
+      "arguments": {
+        "method"   : {
+          "type" : "text",
+          "value": "toggle"
+        },
+        "arguments": {
+          "type" : "object",
+          "value": {
+            "address": {
+              "type" : "text",
+              "value": "1"
+            },
+            "state"  : {
+              "type" : "text",
+              "value": undefined
+            }
+          }
+        }
+      }
+    },
+    "toggle-on-dry-contact#1": {
+      "base"     : null,
+      "arguments": {
+        "method"   : {
+          "type" : "text",
+          "value": "toggle"
+        },
+        "arguments": {
+          "type" : "object",
+          "value": {
+            "address": {
+              "type" : "text",
+              "value": "1"
+            },
+            "state"  : {
+              "type" : "text",
+              "value": "on"
+            }
+          }
+        }
+      }
+    },
+    "toggle-off-dry-contact#1": {
+      "base"     : null,
+      "arguments": {
+        "method"   : {
+          "type" : "text",
+          "value": "toggle"
+        },
+        "arguments": {
+          "type" : "object",
+          "value": {
+            "address": {
+              "type" : "text",
+              "value": "1"
+            },
+            "state"  : {
+              "type" : "text",
+              "value": "on"
+            }
+          }
+        }
+      }
+    },
+  },
+  "events"    : {
+    "received-data": {
+      "base"      : null,
+      "priority"  : Infinity,
+      "conditions": [],
+      "watch"     : []
+    }
+  }
 };
 
 const mixins = {

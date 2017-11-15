@@ -188,13 +188,17 @@ class VirtualAnalogParameter extends AnalogParameter {
     let value = this.source(object);
 
     const func = AnalogParameter.aproximate(value, table);
-    return func instanceof Function
-      ? func(value, model)
-      : value;
+    if (func instanceof Function) {
+      const result = func(value, model);
+      return result === undefined ? defaultValue : result;
+    }
+
+    return value;
   }
 
   source(object) {
-    return object.model.parameters[this.options.source].value(object);
+    const result = object.model.parameters[this.options.source].value(object);
+    return result === undefined ? this.options.defaultValue : result;
   }
 }
 
@@ -227,11 +231,17 @@ class VirtualDigitalParameter extends DigitalParameter {
   }
 }
 
+class Event {
+  constructor(options = {}) {
+    this.options = Object.assign({}, options);
+  }
+  
+  
+}
+
+
 class Editor {
   constructor() {
-    this.listeners = {};
-    this.eventsQueue = [];
-
     this.controllers = {
       DC  : DigitalParameter,
       ADC : AnalogParameter,
@@ -260,43 +270,4 @@ class Editor {
       });
     }
   }
-
-  // Events
-  on(event, handler) {
-    this.listeners[event]
-      ? this.listeners[event].push(handler)
-      : this.listeners[event] = [handler];
-
-    return this;
-  }
-
-  emit(event, ...args) {
-    const { [event]: listeners } = this.listeners;
-    if (!listeners) {
-      return this;
-    }
-
-    for (const handler of listeners) {
-      try {
-        handler(...args);
-      } catch (err) {
-        console.error(new Error(`Error handle event "${event}" with arguments ${JSON.stringify(args)} in handler "${handler.toString()}"`));
-        console.error(err);
-      }
-    }
-
-    return this;
-  }
-
-  removeListener(event, handler) {
-    const { [event]: listeners } = this.listeners;
-    if (!listeners) {
-      return this;
-    }
-
-    this.listeners[event] = listeners.filter(issetHandler => issetHandler !== handler);
-    return this;
-  }
-
-
 }
