@@ -86,7 +86,11 @@ const model = {
       "parent"   : "send-command-to-device",
       "base"     : null,
       "params": {
-        "args": {
+        "method": {
+          "type" : "text",
+          "value": "toggle"
+        },
+        "args" : {
           "type" : "object",
           "value": {
             "address": {
@@ -128,10 +132,6 @@ const model = {
       "parent"   : "toggle-dry-contact#1",
       "base"     : null,
       "params": {
-        "method"   : {
-          "type" : "text",
-          "value": "toggle"
-        },
         "args": {
           "type" : "object",
           "value": {
@@ -149,10 +149,6 @@ const model = {
       "parent"   : "toggle-dry-contact#1",
       "base"     : null,
       "params": {
-        "method"   : {
-          "type" : "text",
-          "value": "toggle"
-        },
         "args": {
           "type" : "object",
           "value": {

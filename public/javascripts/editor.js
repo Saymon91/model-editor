@@ -197,7 +197,7 @@ class VirtualAnalogParameter extends AnalogParameter {
 
     const func = AnalogParameter.aproximate(value, table);
     if (func instanceof Function) {
-      const result = func(value, model);
+      const result = func(value, object);
       return result === undefined ? defaultValue : result;
     }
 
@@ -205,7 +205,7 @@ class VirtualAnalogParameter extends AnalogParameter {
   }
 
   source(object) {
-    const result = object.model.parameters[this.options.source].value(object);
+    const result = this.model.get(this.options.source).value(object);
     return result === undefined ? this.options.defaultValue : result;
   }
 }
@@ -260,24 +260,24 @@ class Command extends ModelItem {
 
   settingsForm() {
     const { id, name, label, base } = this.options;
-    let { parent } = this.options;
+    let { parent, params } = this.options;
 
     const form = $('<form action="" method="post" onSubmit="function () {return false}"></form>');
     form.append(`<span>Id</span><input type="text" name="id" value="${id}" ${base ? 'disabled' : ''}>`);
     form.append(`<span>Name</span><input type="text" name="name" value="${name || ''}" ${base ? 'disabled' : ''}>`);
     form.append(`<span>Label</span><input type="text" name="label" value="${label || ''}" ${base ? 'disabled' : ''}>`);
-    const parentSelector = form.append(`<span>Label</span><select name="" value="${parent}" ${base ? 'disabled' : ''}><option value="" ${parent ? '' : 'selected'}>-</option></select>`).find('select');
+    const parentSelector = form.append(`<span>Label</span><select name="" ${base ? 'disabled' : ''}><option value="" ${parent ? '' : 'selected'}>-</option></select>`).find('select');
     for (const commandId in this.model.commands) {
-      const { name, label } = this.model.commands[commandId];
+      const { name, label } = this.model.get(commandId);
       parentSelector.append($(new Option(label || name || commandId, commandId, false, commandId === parent)));
     }
 
-    let paramsDiff = [];
+    let paramsDiff = [Object.assign({}, params)];
 
-    while(parent) {
-      const { params = null } = this.model.commands[parent];
-      params && paramsDiff.push(params);
-      parent = this.model.commands[parent].parent || null;
+    while (parent) {
+      const { params = null } = this.model.get(parent).options;
+      params && paramsDiff.push(Object.assign({}, params));
+      parent = this.model.get(parent).parent || null;
     }
 
     paramsDiff = paramsDiff.reverse();
@@ -292,9 +292,11 @@ class Command extends ModelItem {
   }
 }
 
+class Model {
+  constructor(configuration = {}) {
+    this.configuration = configuration;
+    this.items = {};
 
-class Editor {
-  constructor() {
     this.controllers = {
       DC  : DigitalParameter,
       ADC : AnalogParameter,
@@ -302,7 +304,33 @@ class Editor {
       VDC : VirtualDigitalParameter,
       EV  : Event,
       CMD : Command
+    };
+
+    this.build();
+  }
+
+  build() {
+    for (const part in this.configuration) {
+      for (const itemId in this.configuration[part]) {
+        const item = this.configuration[part][itemId];
+        this.items[itemId] = new this.controllers[item.type](item, this);
+      }
     }
+  }
+
+  toJSON() {
+    return this.configuration
+  }
+
+  get(id) {
+    return this.items[id];
+  }
+}
+
+
+class Editor {
+  constructor() {
+
   }
 
   mount(container) {
@@ -315,18 +343,21 @@ class Editor {
     return this;
   }
 
-  build() {
-    for (const part in model) {
+  build(model) {
+    model = new Model(model);
+
+    for (const part in model.configuration) {
       const container = $(`<fieldset id="${part}"><legend>${part}</legend></fieldset>`).appendTo(this.elements.tree);
-      for (const elementId in model[part]) {
-        const item = model[part][elementId];
+
+      for (const elementId in model.configuration[part]) {
+        const item = model.get(elementId);
         $(`<div id="label-${elementId}">${elementId}</div>`).appendTo(container).click(() => {
-          model[part][elementId] = new this.controllers[item.type](item, model);
           this.elements.console.empty();
-          this.elements.console.append(model[part][elementId].settingsForm(false));
+          this.elements.console.append(item.settingsForm(false));
         });
       }
-
     }
+
+    return model;
   }
 }

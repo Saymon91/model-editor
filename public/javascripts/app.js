@@ -5,9 +5,11 @@ class App {
     this.nav = new Nav();
     this.editor = new Editor();
     this.editor.mount(this.container);
-    this.editor.build();
+    const buildModel = this.editor.build(model);
 
-    this.container.find('#viewer').append(`<pre>${JSON.stringify(model, true, 2)}</pre>`);
+    console.log(buildModel);
+
+    this.container.find('#viewer').append(`<pre>${JSON.stringify(buildModel, true, 2)}</pre>`);
   }
 }
 
