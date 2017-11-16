@@ -60,8 +60,12 @@ const model = {
   },
   "commands"  : {
     "send-command-to-device": {
-      "base"     : null,
-      "arguments": {
+      "id"       : "send-command-to-device",
+      "name"     : "Send command to device",
+      "type"     : "CMD",
+      "base"     : true,
+      "module"   : "gate",
+      "params": {
         "device-id": {
           "type" : "text",
           "value": undefined
@@ -70,24 +74,19 @@ const model = {
           "type" : "text",
           "value": undefined
         },
-        "arguments": {
-          "type" : "text",
+        "args": {
+          "type" : "object",
           "value": undefined
         }
       }
     },
     "toggle-dry-contact": {
+      "id"       : "toggle-dry-contact",
+      "type"     : "CMD",
+      "parent"   : "send-command-to-device",
       "base"     : null,
-      "arguments": {
-        "device-id": {
-          "type" : "text",
-          "value": undefined
-        },
-        "method"   : {
-          "type" : "text",
-          "value": "toggle"
-        },
-        "arguments": {
+      "params": {
+        "args": {
           "type" : "object",
           "value": {
             "address": {
@@ -103,13 +102,12 @@ const model = {
       }
     },
     "toggle-dry-contact#1": {
+      "id"       : "toggle-dry-contact#1",
+      "type"     : "CMD",
+      "parent"   : "toggle-dry-contact",
       "base"     : null,
-      "arguments": {
-        "method"   : {
-          "type" : "text",
-          "value": "toggle"
-        },
-        "arguments": {
+      "params": {
+        "args": {
           "type" : "object",
           "value": {
             "address": {
@@ -125,19 +123,18 @@ const model = {
       }
     },
     "toggle-on-dry-contact#1": {
+      "id"       : "toggle-on-dry-contact#1",
+      "type"     : "CMD",
+      "parent"   : "toggle-dry-contact#1",
       "base"     : null,
-      "arguments": {
+      "params": {
         "method"   : {
           "type" : "text",
           "value": "toggle"
         },
-        "arguments": {
+        "args": {
           "type" : "object",
           "value": {
-            "address": {
-              "type" : "text",
-              "value": "1"
-            },
             "state"  : {
               "type" : "text",
               "value": "on"
@@ -147,22 +144,21 @@ const model = {
       }
     },
     "toggle-off-dry-contact#1": {
+      "id"       : "toggle-off-dry-contact#1",
+      "type"     : "CMD",
+      "parent"   : "toggle-dry-contact#1",
       "base"     : null,
-      "arguments": {
+      "params": {
         "method"   : {
           "type" : "text",
           "value": "toggle"
         },
-        "arguments": {
+        "args": {
           "type" : "object",
           "value": {
-            "address": {
-              "type" : "text",
-              "value": "1"
-            },
             "state"  : {
               "type" : "text",
-              "value": "on"
+              "value": "off"
             }
           }
         }
@@ -171,6 +167,8 @@ const model = {
   },
   "events"    : {
     "received-data": {
+      "id"        : "received-data",
+      "type"      : "EV",
       "base"      : null,
       "priority"  : Infinity,
       "conditions": [],

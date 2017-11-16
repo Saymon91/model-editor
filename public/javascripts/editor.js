@@ -1,6 +1,12 @@
-class Parameter {
+class ModelItem {
+  constructor(options, model) {
+    Object.assign(this, { options, model });
+  }
+}
+
+class Parameter extends ModelItem {
   constructor(options = {}, model) {
-    this.options = Object.assign({
+    super(Object.assign({
       id          : null,
       name        : null,
       label       : null,
@@ -8,16 +14,14 @@ class Parameter {
       exclusive   : false,
       base        : 'state',
       defaultValue: undefined
-    }, options);
-
-    this.model = model;
+    }, options), model);
   }
 
   toJSON() {
     return this.options;
   }
 
-  form(customOnly = false) {
+  settingsForm(customOnly = false) {
     const { id, name, custom, label } = this.options;
     if (customOnly && !custom) {
       return false;
@@ -29,6 +33,10 @@ class Parameter {
     form.append(`<span>Label</span><input type="text" name="label" value="${label}">`);
     form.append(`<span>Customizable</span><input type="checkbox" name="custom" ${custom ? 'checked' : ''}>`);
     return form;
+  }
+
+  customForm() {
+    return this.settingsForm(true);
   }
 
   value(object) {
@@ -49,14 +57,14 @@ class StaticParameter extends Parameter {
     super(Object.assign(Object.freeze({ static: true, custom: false }), { value: null, exclusive: false }, options));
   }
 
-  form(customOnly = false) {
-    const form = super.form(customOnly);
+  settingsForm(customOnly = false) {
+    const form = super.settingsForm(customOnly);
     if (!form) {
       return false;
     }
 
     form.append(`<span>Exclusive</span><input type="checkbox" name="exclusive" ${this.options.exclusive ? 'checked' : ''}>`);
-    form.append(`<span>DefaultValue</span><input type="text" name="defaultValue" value="${this.options.defaultValue}">`);
+    form.append(`<span>DefaultValue</span><input type="text" name="defaultValue" value="${this.options.defaultValue || ''}">`);
     return form;
   }
 
@@ -77,7 +85,7 @@ class DigitalParameter extends Parameter {
   }
 
   form(customOnly = false) {
-    const form = super.form(customOnly);
+    const form = super.settingsForm(customOnly);
     if (!form) {
       return form;
     }
@@ -98,10 +106,10 @@ class AnalogParameter extends Parameter {
     }, options), model);
   }
 
-  form(customOnly = false) {
-    const form = super.form(customOnly);
+  settingsForm(customOnly = false) {
+    const form = super.settingsForm(customOnly);
     return form
-      ? form.append(`<span>DefaultValue</span><input type="number" name="defaultValue" step=0.001 value="${this.options.defaultValue}">`)
+      ? form.append(`<span>DefaultValue</span><input type="number" name="defaultValue" step=0.001 value="${this.options.defaultValue || 0}">`)
       : form;
   }
 }
@@ -123,8 +131,8 @@ class VirtualAnalogParameter extends AnalogParameter {
     }, options), model);
   }
 
-  form(customOnly = false) {
-    const form = super.form(customOnly);
+  settingsForm(customOnly = false) {
+    const form = super.settingsForm(customOnly);
     if (!form) {
       return form;
     }
@@ -211,8 +219,8 @@ class VirtualDigitalParameter extends DigitalParameter {
     }, options), model);
   }
 
-  form(customOnly = false) {
-    const form = super.form(customOnly);
+  settingsForm(customOnly = false) {
+    const form = super.settingsForm(customOnly);
     if (!form) {
       return form;
     }
@@ -231,12 +239,57 @@ class VirtualDigitalParameter extends DigitalParameter {
   }
 }
 
-class Event {
-  constructor(options = {}) {
-    this.options = Object.assign({}, options);
+class Event extends ModelItem {
+  constructor(options = {}, model) {
+    super(Object.assign({
+      type: 'EV'
+    }, options), model);
   }
-  
-  
+
+  settingsForm() {
+
+  }
+}
+
+class Command extends ModelItem {
+  constructor(options = {}, model) {
+    super(Object.assign({
+      type: 'CMD'
+    }, options), model);
+  }
+
+  settingsForm() {
+    const { id, name, label, base } = this.options;
+    let { parent } = this.options;
+
+    const form = $('<form action="" method="post" onSubmit="function () {return false}"></form>');
+    form.append(`<span>Id</span><input type="text" name="id" value="${id}" ${base ? 'disabled' : ''}>`);
+    form.append(`<span>Name</span><input type="text" name="name" value="${name || ''}" ${base ? 'disabled' : ''}>`);
+    form.append(`<span>Label</span><input type="text" name="label" value="${label || ''}" ${base ? 'disabled' : ''}>`);
+    const parentSelector = form.append(`<span>Label</span><select name="" value="${parent}" ${base ? 'disabled' : ''}><option value="" ${parent ? '' : 'selected'}>-</option></select>`).find('select');
+    for (const commandId in this.model.commands) {
+      const { name, label } = this.model.commands[commandId];
+      parentSelector.append($(new Option(label || name || commandId, commandId, false, commandId === parent)));
+    }
+
+    let paramsDiff = [];
+
+    while(parent) {
+      const { params = null } = this.model.commands[parent];
+      params && paramsDiff.push(params);
+      parent = this.model.commands[parent].parent || null;
+    }
+
+    paramsDiff = paramsDiff.reverse();
+
+    console.log(paramsDiff);
+
+    return form;
+  }
+
+  useForm() {
+
+  }
 }
 
 
@@ -246,7 +299,9 @@ class Editor {
       DC  : DigitalParameter,
       ADC : AnalogParameter,
       VADC: VirtualAnalogParameter,
-      VDC : VirtualDigitalParameter
+      VDC : VirtualDigitalParameter,
+      EV  : Event,
+      CMD : Command
     }
   }
 
@@ -261,13 +316,17 @@ class Editor {
   }
 
   build() {
-    for (const commandId in model.parameters) {
-      const parameter = model.parameters[commandId];
-      $(`<div id="label-${commandId}">${commandId}</div>`).appendTo(this.elements.tree).click(() => {
-        model.parameters[commandId] = new this.controllers[parameter.type](parameter, model);
-        this.elements.console.empty();
-        this.elements.console.append(model.parameters[commandId].form(false));
-      });
+    for (const part in model) {
+      const container = $(`<fieldset id="${part}"><legend>${part}</legend></fieldset>`).appendTo(this.elements.tree);
+      for (const elementId in model[part]) {
+        const item = model[part][elementId];
+        $(`<div id="label-${elementId}">${elementId}</div>`).appendTo(container).click(() => {
+          model[part][elementId] = new this.controllers[item.type](item, model);
+          this.elements.console.empty();
+          this.elements.console.append(model[part][elementId].settingsForm(false));
+        });
+      }
+
     }
   }
 }
