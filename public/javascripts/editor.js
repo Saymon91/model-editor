@@ -145,8 +145,8 @@ class VirtualAnalogParameter extends AnalogParameter {
 </select>`));
     const sourceSelector = form.find('select[name="source"]');
 
-    for (const id in this.model.parameters) {
-      const { label, name } = this.model.parameters[id];
+    for (const id in this.model.configuration.parameters) {
+      const { label, name } = this.model.get(id).options;
       sourceSelector.append($(new Option(label || name || id, id, false, id === source)));
     }
 
@@ -251,11 +251,15 @@ class Event extends ModelItem {
   }
 }
 
-class Command extends ModelItem {
+/*
+class Command extends Function {
   constructor(options = {}, model) {
-    super(Object.assign({
-      type: 'CMD'
-    }, options), model);
+    super('params', '');
+
+    Object.assign(this, {
+      options: Object.assign({ type: 'CMD' }, options),
+      model
+    });
   }
 
   settingsForm() {
@@ -289,6 +293,43 @@ class Command extends ModelItem {
 
   useForm() {
 
+  }
+}
+*/
+
+class Command extends Function {
+  constructor(options = {}, model = {}) {
+    super('args', 'return arguments.callee');
+    Object.assign(this, { options, model });
+  }
+
+  settingsForm() {
+    const { id, name, label, base } = this.options;
+    let { parent, params } = this.options;
+
+    const form = $('<form action="" method="post" onSubmit="function () {return false}"></form>');
+    form.append(`<span>Id</span><input type="text" name="id" value="${id}" ${base ? 'disabled' : ''}>`);
+    form.append(`<span>Name</span><input type="text" name="name" value="${name || ''}" ${base ? 'disabled' : ''}>`);
+    form.append(`<span>Label</span><input type="text" name="label" value="${label || ''}" ${base ? 'disabled' : ''}>`);
+    const parentSelector = form.append(`<span>Label</span><select name="" ${base ? 'disabled' : ''}><option value="" ${parent ? '' : 'selected'}>-</option></select>`).find('select');
+    for (const commandId in this.model.commands) {
+      const { name, label } = this.model.get(commandId);
+      parentSelector.append($(new Option(label || name || commandId, commandId, false, commandId === parent)));
+    }
+
+    let paramsDiff = [params];
+
+    while (parent) {
+      const { params = null } = this.model.get(parent).options;
+      params && paramsDiff.push(params);
+      parent = this.model.get(parent).parent || null;
+    }
+
+    paramsDiff = paramsDiff.reverse();
+
+    console.log(paramsDiff);
+
+    return form;
   }
 }
 
@@ -360,4 +401,8 @@ class Editor {
 
     return model;
   }
+}
+
+function call(...args) {
+  console.log(...args);
 }

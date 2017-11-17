@@ -5,28 +5,41 @@ const model = {
       "name"  : "parking",
       "label" : "Test",
       "custom": false,
-      "type"  : "DC",
-      "invert": false
+      "type"  : "DC"
     },
     "parameter-field-#2": {
       "id"    : "parameter-field-#2",
-      "name"  : "guard",
-      "label" : "Test1",
-      "custom": true,
+      "label" : "",
+      "custom": false,
       "type"  : "DC",
-      "invert": true
+    },
+    "guard": {
+      "id"    : "guard",
+      "label" : "Guard",
+      "custom": false,
+      "type"  : "VDC",
+      "invert": true,
+      "source": "parameter-field-#2"
     },
     "parameter-field-#3": {
       "id"         : "parameter-field-#3",
-      "name"       : "guard",
-      "label"      : "Test1",
-      "custom"     : true,
+      "name"       : "",
+      "label"      : "",
+      "custom"     : false,
       "type"       : "ADC"
+    },
+    "ade": {
+      "id"         : "ade",
+      "name"       : "",
+      "label"      : "",
+      "custom"     : false,
+      "type"       : "ADC",
+      "source"     : "abc",
     },
     "parameter-field-#4": {
       "id"         : "parameter-field-#4",
-      "name"       : "guard-decode",
-      "label"      : "Test1-decode",
+      "name"       : "fuel-level",
+      "label"      : "Fuel level",
       "custom"     : true,
       "type"       : "VADC",
       "source"     : "parameter-field-#3",
